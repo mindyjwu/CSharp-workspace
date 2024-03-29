@@ -1,0 +1,252 @@
+Option Explicit
+Private AddInInstalled As Boolean
+Private Sub Workbook_Activate()
+Call AlliantStatements2.WorkbookActivate
+End Sub
+Private Sub Workbook_BeforeClose(Cancel As Boolean)
+If AddInInstalled Then Call AlliantStatements2.DefineComplete(Me)
+End Sub
+Private Sub Workbook_Deactivate()
+Call AlliantStatements2.WorkbookDeactivate
+End Sub
+Private Sub Workbook_Open()
+Dim MyAddIn As AddIn
+Dim MyBook As Workbook
+AddInInstalled = False
+If CSng(Application.Version) < CSng("12.0") Then
+On Error Resume Next
+Set MyBook = Application.Workbooks("AlliantStatements2.xlam")
+AddInInstalled = Not (MyBook Is Nothing)
+Else
+For Each MyAddIn In Application.AddIns
+If MyAddIn.Name = "AlliantStatements2.xlam" And MyAddIn.Installed Then
+AddInInstalled = True
+Exit For
+End If
+Next
+End If
+Saved = True
+Set MyAddIn = Nothing
+Set MyBook = Nothing
+If Not AddInInstalled Then Me.Close SaveChanges:=False, RouteWorkbook:=False
+End Sub
+Private Sub Workbook_SheetBeforeRightClick(ByVal Sh As Object, ByVal Target As Excel.Range, Cancel As Boolean)
+Call AlliantStatements2.WorkbookSheetBeforeRightClick(Sh, Target, Cancel)
+End Sub
+Public Sub PostExecuteProcessing()
+    Application.ScreenUpdating = False
+    Application.Calculation = xlCalculationManual
+    
+    Call FormatStatement
+    Call HideNetRoyaltiesEarned
+    Call HidingLogo
+    
+    Application.Calculation = xlCalculationAutomatic
+    Application.ScreenUpdating = True
+    
+End Sub
+' HAL-A002 HAL-92\HAL-202 Fixed disappearing header (Peter Jun, Oct-16-2018)
+' Initial Revision: HAL-A002 HAL-3 Initial Implementation (Kenny Lau, Oct-30-2017)
+Private Sub FormatStatement()
+    On Error GoTo ErrorRoutine
+    Dim Result As Range
+    Dim TotalsRow As Long
+    Dim Counter As Long
+    Dim Col_A As String
+    Dim Col_B As String
+    Dim Col_C As String
+    Dim Col_UnitsReturned As String
+    Dim Col_PerItemRate As String
+    Dim Col_ContributorShare As String
+    Dim Col_ContributorRoyaltyEarned As String
+    Dim Col_ReservesTaken As String
+    Dim Col_ReservesLiquidated As String
+    Dim SearchStartRow As Long
+    Dim SearchColumn As Long
+    Dim SearchTerm As String
+    Dim TitleOffset As Long
+    Dim TitleNewColK As Long
+    Dim TitleNewColL As Long
+    Dim TitleCurrentColM As Long
+    Dim TitleNewColN As Long
+    Dim TitleNewColO As Long
+          
+    Col_A = "A"
+    Col_B = "B"
+    Col_C = "C"
+    Col_UnitsReturned = "H"
+    Col_PerItemRate = "Q"
+    Col_ContributorShare = "S"
+    Col_ContributorRoyaltyEarned = "T"
+    Col_ReservesTaken = "U"
+    Col_ReservesLiquidated = "V"
+    TotalsRow = -1
+    
+    TitleOffset = 0
+    TitleNewColK = 11     ' Col K
+    TitleNewColL = 12     ' Col L
+    TitleCurrentColM = 13 ' Col M
+    TitleNewColN = 14     ' Col N
+    TitleNewColO = 15     ' Col O
+    
+    SearchColumn = 3 ' Col C
+    SearchStartRow = 1
+    SearchTerm = "TOTALS"
+    
+    
+    With ThisWorkbook.Worksheets("Sheet1")
+                   
+        'Find row in column C containing the "TOTALS"
+        Set Result = .Columns(SearchColumn).Find(what:=SearchTerm, After:=.Cells(SearchStartRow, SearchColumn), LookIn:=xlValues, LookAt:= _
+            xlWhole, SearchOrder:=xlByRows, SearchDirection:=xlNext, MatchCase:=False)
+        If Not Result Is Nothing Then
+            'Found the row with "TOTALS"
+            TotalsRow = Result.Row
+            'Hide Units Returned if none displayed.
+            If (.Cells(TotalsRow, Col_UnitsReturned) = 0) Then
+                .Columns(Col_UnitsReturned).EntireColumn.Hidden = True
+                TitleOffset = TitleOffset + 1
+            End If
+            
+            'Hide Per Item Rate if none displayed.
+            If (.Cells(TotalsRow, Col_PerItemRate) = 0) Then
+                .Columns(Col_PerItemRate).EntireColumn.Hidden = True
+                TitleOffset = TitleOffset - 1
+            Else
+                'Grandtotal is not required for Per Item Rate column.
+                .Cells(TotalsRow, Col_PerItemRate) = ""
+            End If
+    
+            'HALS-49 Contributor Share / Contributor Royalty Earned are unconditionally hidden
+            TitleOffset = TitleOffset - 2
+            'Grandtotal is not required for Contributor Share column.
+            .Cells(TotalsRow, Col_ContributorShare) = ""
+            
+            'Hide Reserves Taken if none displayed.
+            If (.Cells(TotalsRow, Col_ReservesTaken) = 0) Then
+                .Columns(Col_ReservesTaken).EntireColumn.Hidden = True
+                TitleOffset = TitleOffset - 1
+            End If
+            
+            'Hide Reserves Liquidated if none displayed.
+            If (.Cells(TotalsRow, Col_ReservesLiquidated) = 0) Then
+                .Columns(Col_ReservesLiquidated).EntireColumn.Hidden = True
+                TitleOffset = TitleOffset - 1
+            End If
+        End If
+        
+        'Move the main statement title (currently in col M) if needed.
+        If TitleOffset <> 0 Then
+            'Copy the title
+            .Range(.Cells(1, TitleCurrentColM), .Cells(5, TitleCurrentColM)).Copy
+            
+            'Paste title
+            If TitleOffset < -2 Then
+                ' find unhidden column
+                Do While .Columns(TitleNewColK).Hidden = True
+                    TitleNewColK = TitleNewColK - 1
+                Loop
+                .Range(.Cells(1, TitleNewColK), .Cells(5, TitleNewColK)).PasteSpecial Paste:=xlValues
+                .Range(.Cells(1, TitleNewColK), .Cells(5, TitleNewColK)).PasteSpecial Paste:=xlPasteFormats
+            ElseIf TitleOffset < 0 Then
+                ' find unhidden column
+                Do While .Columns(TitleNewColL).Hidden = True
+                    TitleNewColL = TitleNewColL - 1
+                Loop
+                .Range(.Cells(1, TitleNewColL), .Cells(5, TitleNewColL)).PasteSpecial Paste:=xlValues
+                .Range(.Cells(1, TitleNewColL), .Cells(5, TitleNewColL)).PasteSpecial Paste:=xlPasteFormats
+            ElseIf TitleOffset > 0 Then
+                ' find unhidden column
+                Do While .Columns(TitleNewColN).Hidden = True
+                    TitleNewColN = TitleNewColN - 1
+                Loop
+                .Range(.Cells(1, TitleNewColN), .Cells(5, TitleNewColN)).PasteSpecial Paste:=xlValues
+                .Range(.Cells(1, TitleNewColN), .Cells(5, TitleNewColN)).PasteSpecial Paste:=xlPasteFormats
+            ElseIf TitleOffset > 2 Then
+                ' find unhidden column
+                Do While .Columns(TitleNewColO).Hidden = True
+                    TitleNewColO = TitleNewColO - 1
+                Loop
+                .Range(.Cells(1, TitleNewColO), .Cells(5, TitleNewColO)).PasteSpecial Paste:=xlValues
+                .Range(.Cells(1, TitleNewColO), .Cells(5, TitleNewColO)).PasteSpecial Paste:=xlPasteFormats
+            End If
+            
+            'Clear original title.
+            .Range(.Cells(1, TitleCurrentColM), .Cells(5, TitleCurrentColM)).Clear
+        End If
+        
+        'Move Recoupment Group from column B into column C.
+        TotalsRow = .Range(Col_C & .Rows.Count).End(xlUp).Row
+        'Going through all the rows
+        For Counter = 1 To TotalsRow
+            'Search for RG@@ text in column B.
+            If (InStr(.Cells(Counter, Col_B), "RG@@") > 0) Then
+                'Recoupment Group found, copy to column C
+                .Range(.Cells(Counter, Col_B), .Cells(Counter, Col_B)).Copy
+                .Range(.Cells(Counter, Col_C), .Cells(Counter, Col_C)).PasteSpecial Paste:=xlValues
+                .Range(.Cells(Counter, Col_C), .Cells(Counter, Col_C)).PasteSpecial Paste:=xlPasteFormats
+                'Strip out RG@@
+                .Cells(Counter, Col_C) = Mid(.Cells(Counter, Col_C), 5)
+                'Blank column B
+                .Cells(Counter, Col_B) = ""
+            End If
+                                                            
+        Next Counter
+        
+    End With
+    
+ErrorRoutine:
+    Set Result = Nothing
+End Sub
+' Hide "Net Roylaties Earned" column if all values are same for "Royalties Earned" column
+' HAL-A002 HAL-92\HAL-202 Multiple fields change (Peter Jun, Oct-01-2018)
+Private Sub HideNetRoyaltiesEarned()
+On Error GoTo ErrorRoutine
+    Dim FirstRow As Long
+    Dim LastRow As Long
+    Dim Counter As Long
+    Dim TargetCol As Integer
+    Dim HideCol As Integer
+    Dim SameFlag As Integer
+    
+    With ThisWorkbook.Worksheets("Sheet1")
+        SameFlag = 0
+        FirstRow = 9
+        TargetCol = 18  'column R
+        HideCol = 23    'column W
+        LastRow = .Cells(Rows.Count, TargetCol).End(xlUp).Row
+        
+        For Counter = FirstRow To LastRow
+            If .Cells(Counter, TargetCol) <> .Cells(Counter, HideCol) Then SameFlag = 1
+        Next Counter
+        
+        If SameFlag = 0 Then .Columns(HideCol).Hidden = True
+    End With
+ErrorRoutine:
+End Sub
+' Hide logo depend on Company UDF value
+' HAL-A003 HAL-323\HAL-332 DaySpring Update (Peter Jun, Jan-07-2020)
+Private Sub HidingLogo()
+    On Error GoTo ErrRoutine
+    Dim SearchCol As Integer
+    Dim SearchRow As Integer
+    
+    SearchRow = 1
+    SearchCol = 53  'column BA
+        
+    With ThisWorkbook.Worksheets("Sheet1")
+        If .Cells(SearchRow, SearchCol) = "Hallmark" Then
+            .Pictures("Picture 1").Visible = True
+            .Pictures("Picture 2").Visible = False
+        ElseIf .Cells(SearchRow, SearchCol) = "DaySpring" Then
+            .Pictures("Picture 1").Visible = False
+            .Pictures("Picture 2").Visible = True
+        Else
+            .Pictures("Picture 1").Visible = True
+            .Pictures("Picture 2").Visible = False
+        End If
+    End With
+    
+ErrRoutine:
+    
+End Sub
