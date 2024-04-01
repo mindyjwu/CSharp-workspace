@@ -9,25 +9,18 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Excel = Microsoft.Office.Interop.Excel;
 namespace PostExecuteProcessing
 {
-    /// <summary>
-    /// Performs any Post Execute Processing on an Excel file
-    /// 
-    /// Notes:
-    /// The namespace, class name and Execute method name are all used by the Statement Service and cannot be changed.
-    /// Additional external libraries will likely require a change to the Statement Service to include them.
-    /// </summary>
     public class PostExecuteProcessing
     {
         /// <summary>
         /// Opens an Excel file and performs any Post Execute Processing necessary. Saves and closes the file.
         /// </summary>
+        
         public void Execute(string workbookPath)
         {
-            /// Section Name: A01 Assignment 1 (with C# Assignment)
-            /// 
-            /// RI-A002 RI-123 Initial config (Jude Saldanha, Dec-06-2023)
+            /// HAL-500 Initial config (Mindy & Ajay, April-01-2024)
             IWorkbook workbook = Factory.GetWorkbookSet().Workbooks.Open(workbookPath);
             try
             {
@@ -40,18 +33,11 @@ namespace PostExecuteProcessing
                     worksheet.Unprotect("");
                 }
                 // Note method refactored later for re-use, the original one matches assignment examples
-                //CreateBorderInfo(worksheet);
-                CreateBorderInfoNew(worksheet);
-                CopyContractInfo(worksheet);
-                //HideZeroReturns(worksheet);
-                HideZeroReturnsNew(worksheet);
-                CreateBorderTotal(worksheet);
-                InsertPart12(worksheet);
-                //GetLogo(worksheet);
-                GetLogoNew(worksheet);
-                CreateBorderAroundPart(worksheet, "Part 10");
-                CreateBorderAroundPart(worksheet, "Part 11");
-                // Hide Columns B and J
+                //CopyContractInfo(worksheet);
+
+                //ClearOriginalTitle(worksheet);
+                //InsertRecoupment()
+                
                 worksheet.Cells["B1"].EntireColumn.Hidden = true;
                 worksheet.Cells["J1"].EntireColumn.Hidden = true;
 
@@ -60,7 +46,6 @@ namespace PostExecuteProcessing
                 {
                     worksheet.Protect("");
                 }
-
                 // Save workbook
                 workbook.Save();
             }
@@ -73,15 +58,97 @@ namespace PostExecuteProcessing
             using (Workbook asposeWorkbook = new Workbook(workbookPath))
             {
                 Worksheet worksheet = asposeWorkbook.Worksheets["Sheet1"];
-
-                PageBreakAfterPart9(worksheet);
-
-                //var pageBreaks = worksheet.GetPrintingPageBreaks(new ImageOrPrintOptions());
-                //Console.Out.WriteLine("Page Break Count" + worksheet.GetPrintingPageBreaks(new ImageOrPrintOptions()).Count());
-
-                // Add Page Number
-                worksheet.PageSetup.SetFooter(1, "Page &P");
-
                 asposeWorkbook.Save(workbookPath);
             }
         }
+        // --------------------------------- Hide Function ------------------------- 
+                //HideTotal(worksheet);
+                //HidePerItem(worksheet);
+                //HideReserveTaken(worksheet);
+                //HideReserveLiquidated(worksheet);
+                //HideNetRoyaltiesEarned(worksheet);
+                //HideLogo(worksheet);
+        public void HideColumnsBasedConditions()
+        {
+            HideIfFunction();
+            HideColumnsNoDisplay();
+            HideHiddenColumns();
+            HideNetRoyaltiesEarned();
+            HideLogoUDF();
+        }
+                
+          private void HideIfFunction()
+        {
+            // find the row with "TOTALS" and hide specific columns based on conditions.
+            // iterating over the cells and checking values
+            int searchColumn = 3; // Column C
+            string searchTerm = "TOTALS";
+            int searchStartRow = 1; // Assuming you want to start from the first row
+            int totalsRow, Col_UnitsReturned;
+            int titleOffset = 0; // Assuming TitleOffset is defined previously
+            
+            Range columnC = xlWorksheet.Columns[searchColumn];
+            Range result = columnC.Find(
+                What: searchTerm,
+                After: xlWorksheet.Cells[searchStartRow, searchColumn],
+                LookIn: XlFindLookIn.xlValues,
+                LookAt: XlLookAt.xlWhole,
+                SearchOrder: XlSearchOrder.xlByRows,
+                SearchDirection: XlSearchDirection.xlNext,
+                MatchCase: false
+            );
+            
+            if (result != null)
+            {
+                // Found the row with "TOTALS"
+                totalsRow = result.Row;
+                // Hide Units Returned if none displayed.
+                if ((double)(xlWorksheet.Cells[totalsRow, Col_UnitsReturned] as Range).Value2 == 0)
+                {
+                    (xlWorksheet.Columns[Col_UnitsReturned] as Range).EntireColumn.Hidden = true;
+                    titleOffset += 1;
+                }
+}
+
+        
+              
+        }
+    
+        private void HideColumnsWithNoDisplay()
+        {
+            // Logic to hide "Units Returned", "Per Item Rate", "Reserves Taken", and "Reserves Liquidated" if none displayed.
+        }
+    
+        private void HideUnconditionallyHiddenColumns()
+        {
+            // Logic to unconditionally hide specific columns like "HALS-49 Contributor Share / Contributor Royalty Earned".
+        }
+    
+        private void HideNetRoyaltiesEarnedColumnIfSame()
+        {
+            // Logic to hide "Net Royalties Earned" column if all values are the same for "Royalties Earned" column.
+        }
+    
+        private void HideLogoBasedOnCompanyUDF()
+        {
+            // Logic to hide the logo depending on the Company UDF value.
+        }
+    
+        public void CopyAndPasteFunction()
+        {
+            MoveMainStatementTitle();
+            MoveRecoupmentGroup();
+        }
+    
+        private void MoveMainStatementTitle()
+        {
+            // Logic to move the main statement title, find unhidden columns, copy and paste the title, and clear the original title.
+        }
+    
+        private void MoveRecoupmentGroup()
+        {
+            // Logic to move Recoupment Group from column B into column C by iterating through all rows and searching for "RG@@" text.
+        }
+    }
+}
+                
