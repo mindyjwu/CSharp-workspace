@@ -152,24 +152,60 @@ namespace PostExecuteProcessing
         private void HideUnconditionallyHiddenColumns()
         {
             // unconditionally hide specific columns like "HALS-49 Contributor Share / Contributor Royalty Earned"
-            xlWorksheet.Columns[Col_ContributorShare].EntireColumn.Hidden = true;
+            int Col_ContributorShare = CellsHelper.ColumnNameToIndex("S");
+            worksheet.Columns[Col_ContributorShare].EntireColumn.Hidden = true;
 
             // Adjust title offset
             titleOffset -= 2;
         
             // Clear the 'Grandtotal' for Contributor Share column
-            xlWorksheet.Cells[TotalsRow, Col_ContributorShare].Value = "";
+            worksheet.Cells[TotalsRow, Col_ContributorShare].Value = "";
             
         }
     
         private void HideNetRoyaltiesEarnedColumnIfSame()
         {
-            // Logic to hide "Net Royalties Earned" column if all values are the same for "Royalties Earned" column.
+            // hide "Net Royalties Earned" column if all values are the same for "Royalties Earned" column
+            int sameFlag = 0;
+            int firstRow = 9; // Starting row for data
+            int targetCol = 18; // Column R
+            int hideCol = 23; // Column W
+            int lastRow = worksheet.Cells[worksheet.Rows.Count, targetCol].End(XlDirection.xlUp).Row;
+        
+            for (int counter = firstRow; counter <= lastRow; counter++)
+            {
+                if (worksheet.Cells[counter, targetCol].Value2.ToString() != worksheet.Cells[counter, hideCol].Value2.ToString())
+                {
+                    sameFlag = 1;
+                    break;
+                }
+            }
         }
-    
+        
         private void HideLogoBasedOnCompanyUDF()
         {
-            // Logic to hide the logo depending on the Company UDF value.
+            // hide the logo depending on the Company UDF value
+            int searchRow = 1; // row where the company name is located
+            int searchCol = 53; // column BA
+            // Get the UDF value from BA, if not set default to alliantLogo
+            string udfValue = worksheet.Cells["BA"].Text;
+            
+            switch(udfValue)
+            {
+                default:
+                    worksheet.Shapes["Picture 1"].Visible = true;
+                    worksheet.Shapes["Picture 2"].Visible = false;
+                    break;
+                case "Hallmark":
+                    worksheet.Shapes["Picture 1"].Visible = true;
+                    worksheet.Shapes["Picture 2"].Visible = false;
+                    break;
+
+                case "DaySpring":
+                    worksheet.Shapes["Picture 1"].Visible = false;
+                    worksheet.Shapes["Picture 2"].Visible = true;
+                    break;
+            } 
         }
     
         public void CopyAndPasteFunction()
@@ -180,12 +216,12 @@ namespace PostExecuteProcessing
     
         private void MoveMainStatementTitle()
         {
-            // Logic to move the main statement title, find unhidden columns, copy and paste the title, and clear the original title.
+            // move the main statement title, find unhidden columns, copy and paste the title, and clear the original title.
         }
     
         private void MoveRecoupmentGroup()
         {
-            // Logic to move Recoupment Group from column B into column C by iterating through all rows and searching for "RG@@" text.
+            // move Recoupment Group from column B into column C by iterating through all rows and searching for "RG@@" text.
         }
     }
 }
