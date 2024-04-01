@@ -99,29 +99,20 @@ namespace PostExecuteProcessing
         {
             // find the row with "TOTALS" and hide specific columns based on conditions.
             // iterating over the cells and checking values
-            int searchColumn = 3; // Column C
-            string searchTerm = "TOTALS";
             int searchStartRow = 1; // Assuming you want to start from the first row
             int totalsRow, Col_UnitsReturned;
             int titleOffset = 0; // Assuming TitleOffset is defined previously
-            
-            Range columnC = xlWorksheet.Columns[searchColumn];
-            Range result = columnC.Find(
-                What: searchTerm,
-                After: xlWorksheet.Cells[searchStartRow, searchColumn],
-                LookIn: XlFindLookIn.xlValues,
-                LookAt: XlLookAt.xlWhole,
-                SearchOrder: XlSearchOrder.xlByRows,
-                SearchDirection: XlSearchDirection.xlNext,
-                MatchCase: false
-            );
-            
+              
+            while (searchStartRow <= worksheet.UsedRange.Range.RowCount)
+            {
+                IRange result = FindNextExactMatch(worksheet.Cells, "C", searchStartRow, "Total")
+            }
             if (result != null)
             {
                 // Found the row with "TOTALS"
                 totalsRow = result.Row;
                 // Hide Units Returned if none displayed.
-                if ((double)(xlWorksheet.Cells[totalsRow, Col_UnitsReturned] as Range).Value2 == 0)
+                if ((double)(worksheet.Cells[totalsRow, Col_UnitsReturned] as Range).Value2 == 0)
                 {
                     (xlWorksheet.Columns[Col_UnitsReturned] as Range).EntireColumn.Hidden = true;
                     titleOffset += 1;
@@ -131,12 +122,44 @@ namespace PostExecuteProcessing
     
         private void HideColumnsWithNoDisplay()
         {
-            // Logic to hide "Units Returned", "Per Item Rate", "Reserves Taken", and "Reserves Liquidated" if none displayed.
+            // hide "Units Returned", "Per Item Rate", "Reserves Taken", and "Reserves Liquidated" if none displayed
+            Range totalsRowRange = FindNextExactMatch(worksheet.Columns[1], "C", 1, searchTerm);
+            if (totalsRowRange != null)
+            {
+                int totalsRow = totalsRowRange.Row;
+                HideColumnIfZero(xlWorksheet, totalsRow, "B", ref titleOffset); // Col_UnitsReturned
+                HideColumnIfZero(xlWorksheet, totalsRow, "C", ref titleOffset); // Col_PerItemRate
+                HideColumnIfZero(xlWorksheet, totalsRow, "D", ref titleOffset); // Col_ReservesTaken
+                HideColumnIfZero(xlWorksheet, totalsRow, "E", ref titleOffset); // Col_ReservesLiquidated
+            }
         }
-    
+        
+        private void HideColumnIfZero(Worksheet worksheet, int row, string columnStr, ref int titleOffset)
+        {
+            int column = CellsHelper.ColumnNameToIndex(columnStr);
+            if ((xlWorksheet.Cells[row, column] as Range).Value2 == 0)
+            {
+                worksheet.Columns[column].EntireColumn.Hidden = true;
+                titleOffset--; // Adjust based on your logic, could be increment or decrement
+            }
+            else if (columnStr == "C") // Assuming "C" is the "Per Item Rate" column
+            {
+                // Grandtotal is not required for "Per Item Rate" column
+                (worksheet.Cells[row, column] as Range).Value2 = "";
+            }
+        }
+        
         private void HideUnconditionallyHiddenColumns()
         {
-            // Logic to unconditionally hide specific columns like "HALS-49 Contributor Share / Contributor Royalty Earned".
+            // unconditionally hide specific columns like "HALS-49 Contributor Share / Contributor Royalty Earned"
+            xlWorksheet.Columns[Col_ContributorShare].EntireColumn.Hidden = true;
+
+            // Adjust title offset
+            titleOffset -= 2;
+        
+            // Clear the 'Grandtotal' for Contributor Share column
+            xlWorksheet.Cells[TotalsRow, Col_ContributorShare].Value = "";
+            
         }
     
         private void HideNetRoyaltiesEarnedColumnIfSame()
