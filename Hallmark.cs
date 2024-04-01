@@ -61,6 +61,23 @@ namespace PostExecuteProcessing
                 asposeWorkbook.Save(workbookPath);
             }
         }
+
+        // Common Wrapper for Searching 
+        private IRange FindNextMatch(IRange cells, string columnStr, int startRow, string term, LookAt lookAt)
+        {
+            int column = CellsHelper.ColumnNameToIndex(columnStr);
+            return cells[1, column].EntireColumn.Find(
+                    term, cells[startRow, column], FindLookIn.Values, lookAt,
+                    SearchOrder.ByRows, SearchDirection.Next, false);
+        }
+        private IRange FindNextPartialMatch(IRange cells, string columnStr, int startRow, string term)
+        {
+            return FindNextMatch(cells, columnStr, startRow, term, LookAt.Part);
+        }
+        private IRange FindNextExactMatch(IRange cells, string columnStr, int startRow, string term)
+        {
+            return FindNextMatch(cells, columnStr, startRow, term, LookAt.Whole);
+        }
         // --------------------------------- Hide Function ------------------------- 
                 //HideTotal(worksheet);
                 //HidePerItem(worksheet);
@@ -68,6 +85,7 @@ namespace PostExecuteProcessing
                 //HideReserveLiquidated(worksheet);
                 //HideNetRoyaltiesEarned(worksheet);
                 //HideLogo(worksheet);
+        
         public void HideColumnsBasedConditions()
         {
             HideIfFunction();
@@ -108,10 +126,7 @@ namespace PostExecuteProcessing
                     (xlWorksheet.Columns[Col_UnitsReturned] as Range).EntireColumn.Hidden = true;
                     titleOffset += 1;
                 }
-}
-
-        
-              
+            }        
         }
     
         private void HideColumnsWithNoDisplay()
