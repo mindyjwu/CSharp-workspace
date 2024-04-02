@@ -174,9 +174,9 @@ namespace PostExecuteProcessing
         
             for (int counter = firstRow; counter <= lastRow; counter++)
             {
-                if (worksheet.Cells[counter, targetCol].Value2.ToString() != worksheet.Cells[counter, hideCol].Value2.ToString())
+                if (worksheet.Cells[counter, targetCol].Value2 == worksheet.Cells[counter, hideCol].Value2)
                 {
-                    sameFlag = 1;
+                    result.EntireRow.Hidden = true;
                     break;
                 }
             }
