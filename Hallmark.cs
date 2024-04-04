@@ -216,12 +216,44 @@ namespace PostExecuteProcessing
     
         private void MoveMainStatementTitle()
         {
-            // move the main statement title, find unhidden columns, copy and paste the title, and clear the original title.
+            // move the main statement title, find unhidden columns, copy and paste the title, and clear the original title
+            // move Recoupment Group from column B into column C by iterating through all rows and searching for "RG@@" text
+            Range lastCell = worksheet.Cells.SpecialCells(XlCellType.xlCellTypeLastCell, Type.Missing);
+            int lastRow = lastCell.Row;
+            int lastColumn = lastCell.Column;
+        
+            // Find the last non-null cell (the last column that has data value)
+            Range lastNotNullCell = null;
+            for (int i = lastRow; i >= 1; i--)
+            {
+                if (worksheet.Cells[i, lastColumn].Value != null)
+                {
+                    lastNotNullCell = worksheet.Cells[i, lastColumn];
+                    break;
+                }
+            }
+        
+            if (lastNotNullCell == null)
+            {
+                throw new Exception("No data found in the worksheet.");
+            }
+        
+            // Calculate the center of the table
+            int centerColumnIndex = lastNotNullCell.Column / 2;
+        
+            // Center the title at the top of the Excel sheet
+            Range titleRange = worksheet.Range[worksheet.Cells[1, 1], worksheet.Cells[1, centerColumnIndex]];
+            titleRange.Merge();
+            titleRange.Value = title;
+            titleRange.HorizontalAlignment = XlHAlign.xlHAlignCenter;
+            
+            
         }
     
         private void MoveRecoupmentGroup()
         {
-            // move Recoupment Group from column B into column C by iterating through all rows and searching for "RG@@" text.
+            
+        
         }
     }
 }
